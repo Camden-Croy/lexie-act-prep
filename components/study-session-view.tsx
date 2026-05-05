@@ -44,15 +44,47 @@ export default function StudySessionView({
   const [saveResult, setSaveResult] = useState<SessionSaveResult | null>(null);
   const [crossedMilestone, setCrossedMilestone] = useState<OwlMilestone | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Wall-clock anchor: when the current running segment started
+  const runningStartRef = useRef<number | null>(null);
+  // Accumulated seconds from previous running segments (before pauses)
+  const accumulatedRef = useRef(0);
 
   const strategy = getStrategyForSection(day.section);
 
-  // Timer interval management
+  // Timer interval management — uses wall-clock time so background tabs stay accurate
   useEffect(() => {
     if (timerState === "running") {
-      intervalRef.current = setInterval(() => {
-        setElapsedSeconds((prev) => prev + 1);
-      }, 1000);
+      runningStartRef.current = Date.now();
+
+      const tick = () => {
+        const segmentMs = Date.now() - (runningStartRef.current ?? Date.now());
+        setElapsedSeconds(accumulatedRef.current + Math.floor(segmentMs / 1000));
+      };
+
+      intervalRef.current = setInterval(tick, 1000);
+
+      // When the tab regains visibility, immediately recalculate elapsed time
+      const handleVisibility = () => {
+        if (document.visibilityState === "visible") {
+          tick();
+        }
+      };
+      document.addEventListener("visibilitychange", handleVisibility);
+
+      return () => {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+        document.removeEventListener("visibilitychange", handleVisibility);
+      };
+    }
+
+    // When pausing, snapshot the accumulated time
+    if (timerState === "paused" && runningStartRef.current !== null) {
+      const segmentMs = Date.now() - runningStartRef.current;
+      accumulatedRef.current += Math.floor(segmentMs / 1000);
+      runningStartRef.current = null;
     }
 
     return () => {
