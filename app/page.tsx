@@ -4,7 +4,8 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
-import { LogOut, BookOpen } from "lucide-react";
+import { LogOut, BookOpen, Shield } from "lucide-react";
+import { isAdminEmail } from "@/lib/admin";
 import { STUDY_PLAN, type StudyPlanDay } from "@/lib/study-plan";
 import { getCurrentMilestone, getNextMilestone, checkMilestoneCrossed } from "@/lib/milestones";
 import { getCompletedDays, getDayProgress, getStudyStreak, type DayProgress, type SessionSaveResult } from "@/app/actions";
@@ -194,15 +195,28 @@ export default function Home() {
             <p className="text-xs text-muted-foreground">{session.user.name}</p>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => signOut().then(() => router.push("/sign-in"))}
-          aria-label="Sign out"
-        >
-          <LogOut className="w-4 h-4 mr-1.5" />
-          Sign out
-        </Button>
+        <div className="flex items-center gap-2">
+          {isAdminEmail(session.user.email) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push("/admin")}
+              aria-label="Admin"
+            >
+              <Shield className="w-4 h-4 mr-1.5" />
+              Admin
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => signOut().then(() => router.push("/sign-in"))}
+            aria-label="Sign out"
+          >
+            <LogOut className="w-4 h-4 mr-1.5" />
+            Sign out
+          </Button>
+        </div>
       </header>
 
       {view === "selector" && (
